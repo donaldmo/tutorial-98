@@ -1,0 +1,36 @@
+{
+  "name": "workflow-node-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"nodemon src/server.js\" \"wait-on http://localhost:5500/api/health && pnpm --prefix client dev\"",
+    "server": "nodemon src/server.js",
+    "client": "pnpm --prefix client dev",
+    "build": "pnpm --prefix client build",
+    "start": "node src/server.js",
+    "test:unit": "node --test tests/unit/**/*.test.mjs",
+    "backfill:overcapacity": "node scripts/backfill-overcapacity-allocations.js",
+    "migrate:admin-email-index": "node scripts/migrate-admin-email-index.js"
+  },
+  "dependencies": {
+    "@upstash/qstash": "^2.8.1",
+    "@sendgrid/mail": "^8.1.6",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.10.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.5",
+    "multer": "^2.1.1",
+    "nodemailer": "^8.0.5",
+    "resend": "^6.12.2"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.9",
+    "wait-on": "^9.0.5"
+  }
+}

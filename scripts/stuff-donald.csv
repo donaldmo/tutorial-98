@@ -1,0 +1,3 @@
+name,email,role,access_level,hourly_rate,available_hours_per_month,productivity_factor,annual_fee_budget,annual_budgeted_hours,department_name
+Donald Motswiri,domotswiri@gmail.com,Accountant,Standard,520,160,0.88,520000,1000,Management Accounts
+

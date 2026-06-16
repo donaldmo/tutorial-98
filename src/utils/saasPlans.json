@@ -1,0 +1,128 @@
+[
+  {
+    "id": "free",
+    "name": "Free",
+    "price_monthly": 0,
+    "price_annual": 0,
+    "max_users": 3,
+    "max_clients": 20,
+    "max_jobs": 50,
+    "max_admins_per_organisation": 1,
+    "max_organisations_per_owner_email": 1,
+    "recommended": false,
+    "features": [
+      "Advanced analytics",
+      "Efficiency dashboard",
+      "Time tracking",
+      "Allocation"
+    ],
+    "billing": {
+      "provider": null,
+      "paystack": {
+        "monthly": null,
+        "annual": null
+      }
+    }
+  },
+  {
+    "id": "starter",
+    "name": "Starter",
+    "price_monthly": 499,
+    "price_annual": 4990,
+    "max_users": 10,
+    "max_clients": 100,
+    "max_jobs": 200,
+    "max_admins_per_organisation": 2,
+    "max_organisations_per_owner_email": 2,
+    "recommended": false,
+    "features": [
+      "Advanced analytics",
+      "Efficiency dashboard",
+      "Time tracking",
+      "Allocation"
+    ],
+    "billing": {
+      "provider": "paystack",
+      "paystack": {
+        "monthly": {
+          "local_plan_key": "starter:monthly",
+          "interval": "monthly",
+          "plan_code": null
+        },
+        "annual": {
+          "local_plan_key": "starter:annual",
+          "interval": "annual",
+          "plan_code": null
+        }
+      }
+    }
+  },
+  {
+    "id": "professional",
+    "name": "Professional",
+    "price_monthly": 999,
+    "price_annual": 9990,
+    "max_users": 30,
+    "max_clients": 500,
+    "max_jobs": 1000,
+    "max_admins_per_organisation": 5,
+    "max_organisations_per_owner_email": 3,
+    "recommended": true,
+    "features": [
+      "Advanced analytics",
+      "Efficiency dashboard",
+      "Time tracking",
+      "Allocation",
+      "Custom branding",
+      "Priority support"
+    ],
+    "billing": {
+      "provider": "paystack",
+      "paystack": {
+        "monthly": {
+          "local_plan_key": "professional:monthly",
+          "interval": "monthly",
+          "plan_code": null
+        },
+        "annual": {
+          "local_plan_key": "professional:annual",
+          "interval": "annual",
+          "plan_code": null
+        }
+      }
+    }
+  },
+  {
+    "id": "enterprise",
+    "name": "Enterprise",
+    "price_monthly": 2499,
+    "price_annual": 24990,
+    "max_users": -1,
+    "max_clients": -1,
+    "max_jobs": -1,
+    "max_admins_per_organisation": -1,
+    "max_organisations_per_owner_email": -1,
+    "recommended": false,
+    "features": [
+      "All features",
+      "Custom integrations",
+      "Dedicated support",
+      "SLA guarantee"
+    ],
+    "billing": {
+      "provider": "paystack",
+      "paystack": {
+        "monthly": {
+          "local_plan_key": "enterprise:monthly",
+          "interval": "monthly",
+          "plan_code": null
+        },
+        "annual": {
+          "local_plan_key": "enterprise:annual",
+          "interval": "annual",
+          "plan_code": null
+        }
+      }
+    }
+  }
+]

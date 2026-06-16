@@ -1,0 +1,2 @@
+- BUG I am able to add different clients using the same email.
+- BUG I am able to add different clients using the same email.

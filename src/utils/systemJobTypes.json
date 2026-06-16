@@ -1,0 +1,152 @@
+[
+  {
+    "name": "Bookkeeping",
+    "description": "Monthly bookkeeping services including ledger maintenance and reconciliations.",
+    "work_components": [
+      { "name": "B: Bookkeeper", "service": "general", "role": "Bookkeeper", "percentage": 60, "hours_multiplier": 1 },
+      { "name": "B: Accountant", "service": "general", "role": "Accountant", "percentage": 30, "hours_multiplier": 1 },
+      { "name": "B: Reviewer", "service": "general", "role": "Reviewer", "percentage": 10, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "Tax Compliance",
+    "description": "Annual tax compliance and return preparation.",
+    "work_components": [
+      { "name": "TC: Accountant", "service": "once_off", "role": "Accountant", "percentage": 45, "hours_multiplier": 1 },
+      { "name": "TC: Senior Accountant", "service": "once_off", "role": "Senior Accountant", "percentage": 35, "hours_multiplier": 1 },
+      { "name": "TC: Reviewer", "service": "once_off", "role": "Reviewer", "percentage": 20, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "SARS EMP201/501",
+    "description": "EMP201/501 submission and reconciliation.",
+    "work_components": [
+      { "name": "EMP: Bookkeeper", "service": "payroll", "role": "Bookkeeper", "percentage": 40, "hours_multiplier": 1 },
+      { "name": "EMP: Accountant", "service": "payroll", "role": "Accountant", "percentage": 40, "hours_multiplier": 1 },
+      { "name": "EMP: Reviewer", "service": "payroll", "role": "Reviewer", "percentage": 20, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "SARS IT14 Returns",
+    "description": "IT14 tax return preparation and submission.",
+    "work_components": [
+      { "name": "IT14: Accountant", "service": "once_off", "role": "Accountant", "percentage": 45, "hours_multiplier": 1 },
+      { "name": "IT14: Senior Accountant", "service": "once_off", "role": "Senior Accountant", "percentage": 35, "hours_multiplier": 1 },
+      { "name": "IT14: Reviewer", "service": "once_off", "role": "Reviewer", "percentage": 20, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "VAT Returns & Reconciliation",
+    "description": "Monthly or bi-monthly VAT return preparation and submission.",
+    "work_components": [
+      { "name": "VAT: Accountant", "service": "payroll", "role": "Accountant", "percentage": 50, "hours_multiplier": 1 },
+      { "name": "VAT: Senior Accountant", "service": "payroll", "role": "Senior Accountant", "percentage": 30, "hours_multiplier": 1 },
+      { "name": "VAT: Reviewer", "service": "payroll", "role": "Reviewer", "percentage": 20, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "CIPC Annual Returns",
+    "description": "CIPC annual return filing.",
+    "work_components": [
+      { "name": "CIPC-AR: Bookkeeper", "service": "once_off", "role": "Bookkeeper", "percentage": 50, "hours_multiplier": 1 },
+      { "name": "CIPC-AR: Accountant", "service": "once_off", "role": "Accountant", "percentage": 40, "hours_multiplier": 1 },
+      { "name": "CIPC-AR: Reviewer", "service": "once_off", "role": "Reviewer", "percentage": 10, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "CIPC Company Registration",
+    "description": "New company registration with CIPC.",
+    "work_components": [
+      { "name": "CIPC-CR: Accountant", "service": "once_off", "role": "Accountant", "percentage": 60, "hours_multiplier": 1 },
+      { "name": "CIPC-CR: Manager", "service": "once_off", "role": "Manager", "percentage": 40, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "B-BBEE Verification",
+    "description": "B-BBEE verification and scorecard preparation.",
+    "work_components": [
+      { "name": "BBBEE: Auditor", "service": "once_off", "role": "Auditor", "percentage": 40, "hours_multiplier": 1 },
+      { "name": "BBBEE: Manager", "service": "once_off", "role": "Manager", "percentage": 30, "hours_multiplier": 1 },
+      { "name": "BBBEE: Reviewer", "service": "once_off", "role": "Reviewer", "percentage": 30, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "Statutory Audit",
+    "description": "Statutory audit services in accordance with IAASB standards.",
+    "work_components": [
+      { "name": "SA: Auditor", "service": "once_off", "role": "Auditor", "percentage": 40, "hours_multiplier": 1 },
+      { "name": "SA: Senior Accountant", "service": "once_off", "role": "Senior Accountant", "percentage": 25, "hours_multiplier": 1 },
+      { "name": "SA: Manager", "service": "once_off", "role": "Manager", "percentage": 20, "hours_multiplier": 1 },
+      { "name": "SA: Partner", "service": "once_off", "role": "Partner", "percentage": 15, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "Internal Audit",
+    "description": "Internal audit and risk assessment services.",
+    "work_components": [
+      { "name": "IA: Auditor", "service": "once_off", "role": "Auditor", "percentage": 40, "hours_multiplier": 1 },
+      { "name": "IA: Manager", "service": "once_off", "role": "Manager", "percentage": 30, "hours_multiplier": 1 },
+      { "name": "IA: Accountant", "service": "once_off", "role": "Accountant", "percentage": 30, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "Review Engagement",
+    "description": "Independent review of financial statements.",
+    "work_components": [
+      { "name": "RE: Accountant", "service": "once_off", "role": "Accountant", "percentage": 40, "hours_multiplier": 1 },
+      { "name": "RE: Senior Accountant", "service": "once_off", "role": "Senior Accountant", "percentage": 30, "hours_multiplier": 1 },
+      { "name": "RE: Reviewer", "service": "once_off", "role": "Reviewer", "percentage": 30, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "Advisory Services",
+    "description": "Business and financial advisory services.",
+    "work_components": [
+      { "name": "AS: Manager", "service": "once_off", "role": "Manager", "percentage": 40, "hours_multiplier": 1 },
+      { "name": "AS: Director", "service": "once_off", "role": "Director", "percentage": 30, "hours_multiplier": 1 },
+      { "name": "AS: Accountant", "service": "once_off", "role": "Accountant", "percentage": 30, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "Consulting",
+    "description": "Management and strategy consulting.",
+    "work_components": [
+      { "name": "C: Manager", "service": "once_off", "role": "Manager", "percentage": 40, "hours_multiplier": 1 },
+      { "name": "C: Director", "service": "once_off", "role": "Director", "percentage": 30, "hours_multiplier": 1 },
+      { "name": "C: Accountant", "service": "once_off", "role": "Accountant", "percentage": 30, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "Payroll Processing",
+    "description": "Monthly payroll processing service.",
+    "work_components": [
+      { "name": "P: Bookkeeper", "service": "payroll", "role": "Bookkeeper", "percentage": 10, "hours_multiplier": 1 },
+      { "name": "P: Reviewer", "service": "payroll", "role": "Reviewer", "percentage": 90, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "Annual Financial Statements",
+    "description": "Preparation of annual financial statements.",
+    "work_components": [
+      { "name": "AFS: Accountant", "service": "once_off", "role": "Accountant", "percentage": 35, "hours_multiplier": 1 },
+      { "name": "AFS: Senior Accountant", "service": "once_off", "role": "Senior Accountant", "percentage": 35, "hours_multiplier": 1 },
+      { "name": "AFS: Reviewer", "service": "once_off", "role": "Reviewer", "percentage": 30, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "Management Accounts",
+    "description": "Monthly or quarterly management accounts preparation.",
+    "work_components": [
+      { "name": "MA: Bookkeeper", "service": "ma", "role": "Bookkeeper", "percentage": 50, "hours_multiplier": 1 },
+      { "name": "MA: Accountant", "service": "ma", "role": "Accountant", "percentage": 40, "hours_multiplier": 1 },
+      { "name": "MA: Reviewer", "service": "ma", "role": "Reviewer", "percentage": 10, "hours_multiplier": 1 }
+    ]
+  },
+  {
+    "name": "Other",
+    "description": "General or other services not covered by standard job types.",
+    "work_components": [
+      { "name": "O: General", "service": "general", "role": null, "percentage": 100, "hours_multiplier": 1 }
+    ]
+  }
+]

@@ -1,0 +1,1 @@
+when deleting a job that is allocated for a month, i have to widthdraw allocation first, i job that i allocated cannot be deleted, unless the job is maked as complete

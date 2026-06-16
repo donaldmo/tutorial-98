@@ -1,0 +1,11 @@
+name,email,role,access_level,hourly_rate,available_hours_per_month,productivity_factor,annual_fee_budget,annual_budgeted_hours,department_name
+Liam Nkosi,liam.nkosi@firm.co.za,Accountant,Standard,520,160,0.88,520000,1000,Management Accounts
+Aisha Patel,aisha.patel@firm.co.za,Bookkeeper,Standard,300,150,0.92,300000,1000,Payroll
+Thabo Mokoena,thabo.mokoena@firm.co.za,Auditor,Standard,650,160,0.85,650000,1000,Management Accounts
+Emily van der Merwe,emily.vdm@firm.co.za,Accountant,Standard,550,155,0.9,550000,1000,Management Accounts
+Daniel Jacobs,daniel.jacobs@firm.co.za,Bookkeeper,Standard,320,140,0.87,320000,1000,Payroll
+Naledi Khumalo,naledi.khumalo@firm.co.za,Auditor,Standard,700,160,0.89,700000,1000,Management Accounts
+Chris Botha,chris.botha@firm.co.za,Accountant,Standard,500,160,0.86,500000,1000,Management Accounts
+Fatima Khan,fatima.khan@firm.co.za,Bookkeeper,Standard,310,150,0.91,310000,1000,Management Accounts
+Sipho Dlamini,sipho.dlamini@firm.co.za,Auditor,Standard,680,160,0.88,680000,1000,Management Accounts
+Megan Naidoo,megan.naidoo@firm.co.za,Accountant,Standard,530,158,0.9,530000,1000,Management Accounts
