@@ -12,12 +12,6 @@ const round = (v, d = 2) => {
 
 const sum = (arr, fn) => arr.reduce((s, x) => s + Number(fn(x) || 0), 0);
 
-const resolveAssumedDeadline = (monthValueString) => {
-  const sourceMonth = String(monthValueString || new Date().toISOString().slice(0, 7));
-  const [year, monthNumber] = sourceMonth.split('-').map(Number);
-  return new Date(Date.UTC(year, monthNumber - 1, 25));
-};
-
 const toDateOrNull = (value) => {
   if (!value) return null;
   const date = new Date(value);
@@ -70,7 +64,13 @@ export default async function computeTeamProductivity(organisationId, { month = 
   const timeEntryQuery = allocIds.length
     ? { organisation_id: organisationId, allocation_id: { $in: allocIds } }
     : { organisation_id: organisationId, allocation_id: { $in: [] } };
-  if (month) timeEntryQuery.date = { $regex: `^${month}` };
+  if (month) {
+    const [y, m] = month.split('-').map(Number);
+    const start = `${month}-01`;
+    const next = new Date(Date.UTC(y, m, 1));
+    const end = next.toISOString().slice(0, 10);
+    timeEntryQuery.date = { $gte: start, $lt: end };
+  }
 
   let timeEntries = allocIds.length ? await TimeEntry.find(timeEntryQuery) : [];
   if (!includeNonBillable) {
@@ -95,18 +95,26 @@ export default async function computeTeamProductivity(organisationId, { month = 
   const jobPerformanceById = Array.from(allocationsByJobId.entries()).reduce((acc, [jobId, jobAllocations]) => {
     const job = jobById.get(jobId);
     const explicitDeadline = toDateOrNull(job?.deadline);
-    const deadlineDate = explicitDeadline || resolveAssumedDeadline(month);
-    const allocatedDate = jobAllocations
-      .map((allocation) => toDateOrNull(allocation.created_at))
-      .filter(Boolean)
-      .sort((a, b) => a.getTime() - b.getTime())[0] || null;
-    const comparisonDate = allocatedDate || new Date();
-    const daysVariance = Math.round((comparisonDate.getTime() - deadlineDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    // No deadline → exclude from on_time delivery denominator
+    if (!explicitDeadline) {
+      acc.set(jobId, {
+        days_variance: null,
+        performance: 'No Deadline',
+        deadline_source: 'none',
+      });
+      return acc;
+    }
+
+    const comparisonDate = (job?.status === 'Completed' && job?.completed_at)
+      ? toDateOrNull(job.completed_at)
+      : new Date();
+    const daysVariance = Math.round((comparisonDate.getTime() - explicitDeadline.getTime()) / (1000 * 60 * 60 * 24));
 
     acc.set(jobId, {
       days_variance: daysVariance,
       performance: daysVariance <= 0 ? 'On Time' : 'Late',
-      deadline_source: explicitDeadline ? 'explicit' : 'assumed_25th',
+      deadline_source: 'explicit',
     });
     return acc;
   }, new Map());
@@ -125,6 +133,7 @@ export default async function computeTeamProductivity(organisationId, { month = 
         department_name: departmentName,
         team_size_ids: new Set(),
         job_ids: new Set(),
+        dated_job_ids: new Set(),
         budgeted_hours: 0,
         actual_hours: 0,
         on_time_job_ids: new Set(),
@@ -144,6 +153,9 @@ export default async function computeTeamProductivity(organisationId, { month = 
       if (jobPerformance?.performance === 'On Time') {
         team.on_time_job_ids.add(jobId);
       }
+      if (jobPerformance?.performance !== 'No Deadline') {
+        team.dated_job_ids.add(jobId);
+      }
     }
     team.budgeted_hours += Number(allocation.adjusted_hours || 0);
     team.actual_hours += loggedHours;
@@ -154,7 +166,7 @@ export default async function computeTeamProductivity(organisationId, { month = 
   const teams = Array.from(teamsMap.values())
     .map((team) => {
       const teamSize = team.team_size_ids.size;
-      const jobsAssigned = team.job_ids.size;
+      const jobsAssigned = team.dated_job_ids.size;
       const onTimeJobs = team.on_time_job_ids.size;
       const budgetAdherenceRaw = team.actual_hours > 0 ? (team.budgeted_hours / team.actual_hours) * 100 : 0;
       const budgetAdherence = Math.min(150, round(budgetAdherenceRaw, 1));

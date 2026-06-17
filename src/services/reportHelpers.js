@@ -59,12 +59,15 @@ export const calculateEfficiencyPercentage = (budgetedHours, actualHours) => {
   return round((actual / budgeted) * 100, 1);
 };
 
-export const getEfficiencyStatus = (budgetedHours, actualHours) => {
+export const getEfficiencyStatus = (budgetedHours, actualHours, workflowStatus) => {
   const budgeted = Number(budgetedHours || 0);
   const actual = Number(actualHours || 0);
   const variance = actual - budgeted;
 
-  if (actual <= 0) return 'In Progress';
+  if (actual <= 0) {
+    if (workflowStatus === 'Completed') return 'No Time Logged';
+    return 'In Progress';
+  }
   if (variance <= 0) return 'Efficient';
   if (budgeted <= 0) return 'Significantly Over';
   if (variance <= budgeted * 0.2) return 'Slightly Over';
@@ -91,14 +94,14 @@ const buildMonthScopedWorkInputs = async (organisationId, { month = null, depart
     .lean();
   const membershipStaffIds = membershipRows.map((row) => row.staff_id).filter(Boolean);
 
-  const tenantScope = [{ organisation_id: organisationId }];
+  const organisationScope = [{ organisation_id: organisationId }];
   if (membershipStaffIds.length > 0) {
-    tenantScope.push({ _id: { $in: membershipStaffIds } });
+    organisationScope.push({ _id: { $in: membershipStaffIds } });
   }
 
   const staffFilter = {
     $and: [
-      { $or: tenantScope },
+      { $or: organisationScope },
       { is_archived: { $ne: true } },
     ],
   };

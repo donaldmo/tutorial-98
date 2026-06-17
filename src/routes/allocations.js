@@ -14,7 +14,6 @@ import {
 	updateAllocation,
 	deleteAllocationReview,
 	getJobEfficiency,
-	getStaffEfficiency,
 	getOrganisationStaffEfficiencyOverview,
 } from '../controllers/allocationsController.js';
 import { requireAuth, requireAdminAuth } from '../middleware/auth.js';
@@ -34,7 +33,6 @@ router.post('/', requireAdminAuth, createAllocation);
 router.put('/:allocation_id', requireAdminAuth, updateAllocation);
 router.delete('/:allocation_id', requireAdminAuth, deleteAllocation);
 router.get('/jobs/:job_id/efficiency', requireAuth, getJobEfficiency);
-router.get('/staff/:staff_id/efficiency', requireAuth, getStaffEfficiency);
 router.get('/organisation/staff-efficiency', requireAuth, getOrganisationStaffEfficiencyOverview);
 
 export default router;

@@ -136,7 +136,7 @@ const sortTemplates = (templates = []) =>
     return String(a.name || '').localeCompare(String(b.name || ''));
   });
 
-const sanitizeJobTemplatePayload = async (body = {}) => {
+const sanitizeJobTemplatePayload = async (body = {}, organisationId = null) => {
   const defaultFeeInput =
     body.default_fee !== undefined && body.default_fee !== null && body.default_fee !== ''
       ? body.default_fee
@@ -150,7 +150,7 @@ const sanitizeJobTemplatePayload = async (body = {}) => {
     job_type_entries_input: Array.isArray(body.job_type_entries_input) ? body.job_type_entries_input : undefined,
     is_recurring: isRecurring,
     month_range: body.month_range || null,
-  });
+  }, organisationId);
 
   const payload = {
     name: String(body.name || '').trim(),
@@ -280,7 +280,7 @@ const getOrganisationTemplate = async (templateId, organisationId) => {
   return { template, error: null };
 };
 
-const buildJobPayloadFromTemplate = async (template, input = {}) => {
+const buildJobPayloadFromTemplate = async (template, input = {}, organisationId = null) => {
   const clientName = String(input.client_name || '').trim();
   if (!clientName) {
     return { payload: null, error: 'client_name is required' };
@@ -312,7 +312,7 @@ const buildJobPayloadFromTemplate = async (template, input = {}) => {
     estimated_hours: template.estimated_hours ?? null,
     priority: template.default_priority || 'Medium',
     description: template.description || null,
-  });
+  }, organisationId);
 
   return {
     payload: {
@@ -332,7 +332,7 @@ export const listJobTemplates = asyncHandler(async (req, res) => {
 });
 
 export const createJobTemplate = asyncHandler(async (req, res) => {
-  const payload = await sanitizeJobTemplatePayload(req.body || {});
+  const payload = await sanitizeJobTemplatePayload(req.body || {}, req.user.organisation_id);
   payload.template_kind = 'custom';
   payload.is_editable = true;
 
@@ -367,7 +367,7 @@ export const updateJobTemplate = asyncHandler(async (req, res) => {
     return res.status(422).json({ detail: 'System job templates are read only. Clone the template to customise it.' });
   }
 
-  const payload = await sanitizeJobTemplatePayload(req.body || {});
+  const payload = await sanitizeJobTemplatePayload(req.body || {}, req.user.organisation_id);
   payload.template_kind = 'custom';
   payload.is_editable = true;
 
@@ -457,7 +457,7 @@ export const createJobFromJobTemplate = asyncHandler(async (req, res) => {
   const { payload, error: payloadError } = await buildJobPayloadFromTemplate(template, {
     ...(req.query || {}),
     ...(req.body || {}),
-  });
+  }, req.user.organisation_id);
   if (payloadError) return res.status(400).json({ detail: payloadError });
 
   const created = await Job.create({

@@ -5,7 +5,7 @@ const { Schema } = mongoose;
 const staffSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
+    email: { type: String, required: true, lowercase: true, trim: true },
     passwordHash: { type: String },
     // Legacy field from Python backend
     password_hash: { type: String },
@@ -78,6 +78,10 @@ const staffSchema = new Schema(
 staffSchema.index({ is_active: 1, is_archived: 1 }); // analytics: active non-archived staff
 staffSchema.index({ role: 1 });                       // role-based capacity queries
 staffSchema.index({ department_id: 1 });              // department drill-down
+staffSchema.index(
+  { organisation_id: 1, email: 1 },
+  { unique: true, partialFilterExpression: { email: { $type: 'string' } } },
+);
 
 staffSchema.methods.toApiJSON = function toApiJSON() {
   const ret = this.toObject();

@@ -24,6 +24,7 @@ import {
 import { sendAllocationNotificationEmail, sendAllocationAcceptanceNotification } from '../services/allocationEmailService.js';
 import { createNotification } from './notificationsController.js';
 import { getStaffCapacity } from '../services/capacityService.js';
+import { recordJobCompletionEfficiency } from '../services/jobEfficiencyService.js';
 
 const getCurrentMonth = () => {
   const now = new Date();
@@ -239,6 +240,7 @@ const getOverCapacitySnapshot = async ({
   const allocationQuery = {
     staff_id: staffId,
     month,
+    status: 'active',
     organisation_id: organisationId,
   };
   if (excludeAllocationId) {
@@ -266,15 +268,8 @@ const getOverCapacitySnapshot = async ({
 
 const syncJobAllocationPercentage = async (jobId, targetMonth) => {
   if (!jobId) return;
-  const [rows, job] = await Promise.all([
-    Allocation.aggregate([
-      { $match: { job_id: jobId, status: 'active' } },
-      { $group: { _id: '$job_id', total: { $sum: '$percentage' } } },
-    ]),
-    Job.findById(jobId),
-  ]);
+  const job = await Job.findById(jobId);
   if (!job) return;
-  job.total_allocated_percentage = rows[0]?.total || 0;
 
   if (targetMonth) {
     const monthRows = await Allocation.aggregate([
@@ -285,6 +280,17 @@ const syncJobAllocationPercentage = async (jobId, targetMonth) => {
     const mStatus = pct >= 100 ? 'Fully Allocated' : pct > 0 ? 'Partially Allocated' : 'Pending';
     job.monthly_allocations.set(targetMonth, { allocated_percentage: pct, status: mStatus });
   }
+
+  // total_allocated_percentage = max per-month percentage (not cross-month sum)
+  let maxPct = 0;
+  if (job.monthly_allocations && job.monthly_allocations.size > 0) {
+    for (const entry of job.monthly_allocations.values()) {
+      if (entry && entry.allocated_percentage > maxPct) {
+        maxPct = entry.allocated_percentage;
+      }
+    }
+  }
+  job.total_allocated_percentage = maxPct;
 
   // updateAllocationStatus recalculates unified status and calls this.save()
   await job.updateAllocationStatus();
@@ -931,28 +937,6 @@ export const getJobEfficiency = asyncHandler(async (req, res) => {
   });
 });
 
-export const getStaffEfficiency = asyncHandler(async (req, res) => {
-  const staffId = toObjectId(req.params.staff_id);
-  const organisationId = req.user.organisation_id; // Get current user's organization
-  
-  const staff = await Staff.findOne({ 
-    _id: staffId, 
-    organisation_id: organisationId // Ensure organization isolation
-  });
-  
-  if (!staff) return res.status(404).json({ detail: 'Staff member not found in this organization' });
-  
-  const { getStaffEfficiencyHistory } = await import('../services/staffEfficiencyService.js');
-  const efficiency = await getStaffEfficiencyHistory(staffId, organisationId);
-  
-  return res.json({
-    staff_id: staffId.toString(),
-    name: staff.name,
-    role: staff.role,
-    efficiency_tracking: efficiency
-  });
-});
-
 export const getOrganisationStaffEfficiencyOverview = asyncHandler(async (req, res) => {
   const organisationId = req.user.organisation_id; // Get current user's organization
   
@@ -1496,6 +1480,10 @@ export const completeAllocationComponent = asyncHandler(async (req, res) => {
       ? new Date(earliestEntry.start_time)
       : completedAt;
 
+  if (completedAt < startedAt) {
+    return res.status(422).json({ detail: 'completed_at must be on or after the component start time' });
+  }
+
   allocation.workflow_status = 'Completed';
   allocation.started_at = startedAt;
   allocation.started_by = allocation.started_by || req.user?._id || null;
@@ -1515,6 +1503,11 @@ export const completeAllocationComponent = asyncHandler(async (req, res) => {
     createdBy: req.user?._id || null,
   });
   const jobStatus = await syncJobWorkflowStatus(allocation.job_id);
+
+  // Record job-level efficiency (fire-and-forget to not block response)
+  recordJobCompletionEfficiency(allocation._id, req.user?._id, completedAt).catch((err) => {
+    console.warn(`[efficiency] Failed to record completion efficiency for allocation ${allocation._id}: ${err.message}`);
+  });
 
   return res.json({
     allocation: serializeDocument(allocation),
@@ -1630,7 +1623,11 @@ export const getJobAllocationCoverage = asyncHandler(async (req, res) => {
 export const submitAllocationReview = asyncHandler(async (req, res) => {
   const { allocation_id } = req.params;
   const { rating, comments } = req.body;
-  const staffId = req.user?.staff_id;
+  const staffId = req.user?._id;
+
+  if (!staffId) {
+    return res.status(403).json({ detail: 'Authenticated user required to submit a review' });
+  }
 
   // Validate input
   if (!rating || typeof rating !== 'number' || rating < 1 || rating > 5) {
@@ -1643,6 +1640,11 @@ export const submitAllocationReview = asyncHandler(async (req, res) => {
   const allocation = await Allocation.findById(allocation_id);
   if (!allocation) {
     return res.status(404).json({ detail: 'Allocation not found' });
+  }
+
+  // Org-scope access check
+  if (!hasOrgAccess(allocation, req.user.organisation_id)) {
+    return res.status(403).json({ detail: 'Access denied' });
   }
 
   // Check if workflow is completed
@@ -1688,12 +1690,21 @@ export const submitAllocationReview = asyncHandler(async (req, res) => {
 
 export const deleteAllocationReview = asyncHandler(async (req, res) => {
   const { allocation_id } = req.params;
-  const staffId = req.user?.staff_id;
+  const staffId = req.user?._id;
+
+  if (!staffId) {
+    return res.status(403).json({ detail: 'Authenticated user required to delete a review' });
+  }
 
   // Find allocation
   const allocation = await Allocation.findById(allocation_id);
   if (!allocation) {
     return res.status(404).json({ detail: 'Allocation not found' });
+  }
+
+  // Org-scope access check
+  if (!hasOrgAccess(allocation, req.user.organisation_id)) {
+    return res.status(403).json({ detail: 'Access denied' });
   }
 
   // Check if review exists

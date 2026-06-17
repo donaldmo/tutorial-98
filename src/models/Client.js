@@ -31,7 +31,7 @@ const clientSchema = new Schema(
   }
 );
 
-clientSchema.index({ organisation_id: 1, name: 1 }, { unique: true, sparse: true });
+clientSchema.index({ organisation_id: 1, name: 1 }, { unique: true, sparse: true, collation: { locale: 'en', strength: 2 } });
 clientSchema.index(
   { organisation_id: 1, email: 1 },
   { unique: true, partialFilterExpression: { email: { $type: 'string' } } },

@@ -19,7 +19,7 @@ const nextMonthValue = (month) => {
   return `${year}-${String(monthNumber + 1).padStart(2, '0')}`;
 };
 
-const buildTenantStaffFilter = async (organisationId, { staffId = null, staffIds = null } = {}) => {
+const buildOrganisationStaffFilter = async (organisationId, { staffId = null, staffIds = null } = {}) => {
   const membershipRows = await OrganisationMembership.find({
     organisation_id: organisationId,
     status: 'active',
@@ -28,14 +28,14 @@ const buildTenantStaffFilter = async (organisationId, { staffId = null, staffIds
     .lean();
 
   const membershipStaffIds = membershipRows.map((row) => row.staff_id).filter(Boolean);
-  const tenantScope = [{ organisation_id: organisationId }];
+  const organisationScope = [{ organisation_id: organisationId }];
   if (membershipStaffIds.length > 0) {
-    tenantScope.push({ _id: { $in: membershipStaffIds } });
+    organisationScope.push({ _id: { $in: membershipStaffIds } });
   }
 
   const filter = {
     $and: [
-      { $or: tenantScope },
+      { $or: organisationScope },
       { is_archived: { $ne: true } },
     ],
   };
@@ -79,7 +79,7 @@ export const listStaffMonthlySummaries = async (
   const nextMonth = nextMonthValue(monthKey);
   const [{ summary: calendarSummary }, staffFilter] = await Promise.all([
     ensureCalendarForMonth(monthKey, organisationId),
-    buildTenantStaffFilter(organisationId, { staffId, staffIds }),
+    buildOrganisationStaffFilter(organisationId, { staffId, staffIds }),
   ]);
 
   let staffList = await Staff.find(staffFilter)

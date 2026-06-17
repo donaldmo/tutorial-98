@@ -245,7 +245,13 @@ export const reportActualVsBudgeted = asyncHandler(async (req, res) => {
   const jobById = new Map(jobs.map((j) => [String(j._id), j]));
 
   const timeEntryQuery = allocIds.length ? { organisation_id: orgId, allocation_id: { $in: allocIds } } : { organisation_id: orgId, allocation_id: { $in: [] } };
-  if (month) timeEntryQuery.date = { $regex: `^${month}` };
+  if (month) {
+    const [y, m] = month.split('-').map(Number);
+    const start = `${month}-01`;
+    const next = new Date(Date.UTC(y, m, 1));
+    const end = next.toISOString().slice(0, 10);
+    timeEntryQuery.date = { $gte: start, $lt: end };
+  }
   const timeEntries = allocIds.length ? await TimeEntry.find(timeEntryQuery) : [];
 
   const entriesByAlloc = timeEntries.reduce((acc, e) => {
@@ -334,11 +340,6 @@ export const reportTurnaroundTime = asyncHandler(async (req, res) => {
   const now = new Date();
   const DAY_MS = 1000 * 60 * 60 * 24;
   const jobById = new Map(jobs.map((j) => [String(j._id), j]));
-  const resolveAssumedDeadline = (monthValueString) => {
-    const sourceMonth = String(monthValueString || monthValue(now));
-    const [year, monthNumber] = sourceMonth.split('-').map(Number);
-    return new Date(Date.UTC(year, monthNumber - 1, 25));
-  };
   const toDateOrNull = (value) => {
     if (!value) return null;
     const date = new Date(value);
@@ -358,33 +359,54 @@ export const reportTurnaroundTime = asyncHandler(async (req, res) => {
     if (!job) return null;
     const jobAllocations = allocationsByJob[jid];
     const explicitDeadline = toDateOrNull(job.deadline);
-    const deadlineDate = explicitDeadline || resolveAssumedDeadline(month);
-    const allocatedDate = jobAllocations
-      .map((allocation) => toDateOrNull(allocation.created_at))
-      .filter(Boolean)
-      .sort((a, b) => a.getTime() - b.getTime())[0] || null;
-    const comparisonDate = allocatedDate || now;
-    const comparisonDateSource = allocatedDate ? 'allocation_created_at' : 'current_date';
-    const daysVariance = daysBetween(comparisonDate, deadlineDate);
+
+    // No deadline → No Deadline (don't synthesize)
+    if (!explicitDeadline) {
+      return {
+        job_id: jid,
+        job_name: job.name,
+        client_name: job.client_name || 'Unassigned',
+        ...withStatusMeta(job.status || 'Pending'),
+        deadline: null,
+        deadline_source: 'none',
+        comparison_date: null,
+        comparison_date_source: 'no_deadline',
+        days_variance: null,
+        performance: 'No Deadline',
+        allocation_count: jobAllocations.length,
+      };
+    }
+
+    // Use job.completed_at if completed, otherwise current date
+    const comparisonDate = (job.status === 'Completed' && job.completed_at)
+      ? toDateOrNull(job.completed_at)
+      : now;
+    const comparisonDateSource = (job.status === 'Completed' && job.completed_at)
+      ? 'job_completed_at'
+      : 'current_date';
+    const daysVariance = daysBetween(comparisonDate, explicitDeadline);
 
     return {
       job_id: jid,
       job_name: job.name,
       client_name: job.client_name || 'Unassigned',
       ...withStatusMeta(job.status || 'Pending'),
-      deadline: deadlineDate.toISOString(),
-      deadline_source: explicitDeadline ? 'explicit' : 'assumed_25th',
-      comparison_date: comparisonDate.toISOString(),
+      deadline: explicitDeadline.toISOString(),
+      deadline_source: 'explicit',
+      comparison_date: comparisonDate ? comparisonDate.toISOString() : null,
       comparison_date_source: comparisonDateSource,
       days_variance: daysVariance,
       ...withPerformanceMeta(daysVariance <= 0 ? 'On Time' : 'Late'),
       allocation_count: jobAllocations.length,
     };
   }).filter(Boolean).sort((a, b) => {
-    return Number(b.days_variance || 0) - Number(a.days_variance || 0);
+    const aVar = a.days_variance != null ? Number(a.days_variance) : -Infinity;
+    const bVar = b.days_variance != null ? Number(b.days_variance) : -Infinity;
+    return bVar - aVar;
   });
   const onTimeJobs = jobRows.filter((r) => r.performance === 'On Time');
   const lateJobs = jobRows.filter((r) => r.performance === 'Late');
+  const noDeadlineJobs = jobRows.filter((r) => r.performance === 'No Deadline');
 
   try {
     console.info(`[reports] GET /reports/turnaround-time user=${req.user?.id || 'unknown'} org=${orgId} month=${month} jobs=${jobRows.length} late=${lateJobs.length}`);
@@ -400,6 +422,7 @@ export const reportTurnaroundTime = asyncHandler(async (req, res) => {
       total_jobs: jobRows.length,
       on_time_count: onTimeJobs.length,
       late_count: lateJobs.length,
+      no_deadline_count: noDeadlineJobs.length,
       on_time_rate: round(jobRows.length > 0 ? (onTimeJobs.length / jobRows.length) * 100 : 0, 1),
     },
     jobs: jobRows,
@@ -425,19 +448,31 @@ export const reportTeamProductivity = asyncHandler(async (req, res) => {
 export const reportClosedPerStaff = asyncHandler(async (req, res) => {
   const month = req.query.month ? monthKeyValue(req.query.month) : null;
   const orgId = req.user.organisation_id;
-  const { staff, allocations } = await loadCommon(month, orgId);
+  const { allocations } = await loadCommon(month, orgId);
 
   const closed = allocations.filter((a) => String(a.workflow_status || '') === 'Completed');
 
-  const byStaff = staff.map((s) => {
-    const sid = String(s._id);
+  // Include all staff who have completed work in the period (active or inactive)
+  const staffIdsInClosed = [...new Set(closed.map((a) => String(a.staff_id || '')).filter(Boolean))];
+  const closedStaff = staffIdsInClosed.length > 0
+    ? await Staff.find({ _id: { $in: staffIdsInClosed }, organisation_id: orgId }).select('name is_active is_archived').lean()
+    : [];
+
+  const staffById = new Map(closedStaff.map((s) => [String(s._id), s]));
+  const byStaff = staffIdsInClosed.map((sid) => {
+    const s = staffById.get(sid) || {};
     const count = closed.filter((a) => String(a.staff_id || '') === sid).length;
-    return { staff_id: sid, name: s.name, closed_count: count };
-  });
+    return {
+      staff_id: sid,
+      name: s.name || 'Unknown',
+      staff_status: s.is_archived ? 'archived' : s.is_active ? 'active' : 'inactive',
+      closed_count: count,
+    };
+  }).sort((a, b) => b.closed_count - a.closed_count);
 
   try {
     console.info(`[reports] closed-per-staff month=${month} org=${orgId} totalClosed=${closed.length}`);
-    byStaff.forEach((b) => console.info(`[reports] closed-per-staff staff=${b.staff_id} name=${b.name} closed=${b.closed_count}`));
+    byStaff.forEach((b) => console.info(`[reports] closed-per-staff staff=${b.staff_id} name=${b.name} closed=${b.closed_count} status=${b.staff_status}`));
   } catch (e) {
     // ignore logging issues
   }

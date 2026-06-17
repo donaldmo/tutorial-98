@@ -23,12 +23,12 @@ export function parseDateInput(value) {
   const parts = String(value).split('-').map(Number);
   if (parts.length !== 3 || parts.some((part) => !Number.isInteger(part))) return null;
   const [year, month, day] = parts;
-  const parsed = new Date(year, month - 1, day, 12, 0, 0, 0);
+  const parsed = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
   if (
     Number.isNaN(parsed.getTime())
-    || parsed.getFullYear() !== year
-    || parsed.getMonth() !== month - 1
-    || parsed.getDate() !== day
+    || parsed.getUTCFullYear() !== year
+    || parsed.getUTCMonth() !== month - 1
+    || parsed.getUTCDate() !== day
   ) {
     return null;
   }
@@ -39,9 +39,9 @@ function toDateInputString(value) {
   if (!value) return null;
   const parsed = parseDateInput(value);
   if (!parsed) return null;
-  const year = parsed.getFullYear();
-  const month = String(parsed.getMonth() + 1).padStart(2, '0');
-  const day = String(parsed.getDate()).padStart(2, '0');
+  const year = parsed.getUTCFullYear();
+  const month = String(parsed.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(parsed.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
@@ -58,13 +58,13 @@ const ensureJobVisibleToRequester = async (req, jobId) => {
 };
 
 function getDaysInMonth(year, monthIndex) {
-  return new Date(year, monthIndex + 1, 0).getDate();
+  return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
 }
 
 function buildOccurrenceDeadline(year, monthIndex, anchorDay) {
   if (!anchorDay) return null;
   const clampedDay = Math.min(anchorDay, getDaysInMonth(year, monthIndex));
-  return new Date(year, monthIndex, clampedDay, 23, 59, 59);
+  return new Date(Date.UTC(year, monthIndex, clampedDay, 23, 59, 59));
 }
 
 function buildRecurringEntryKey(year, month) {
@@ -150,10 +150,16 @@ function removeMonthlyAllocationKeys(job, monthKeys = []) {
   return changed;
 }
 
+const VALID_RECURRENCE_TYPES = Object.keys(RECURRENCE_MONTH_INTERVALS);
+const VALID_MONTH_RANGES = ['calendar', 'rolling'];
+
 export function getRecurringPayloadError(payload = {}) {
   if (!payload.is_recurring) return null;
   if (!payload.recurrence_type || !RECURRENCE_MONTH_INTERVALS[payload.recurrence_type]) {
-    return 'recurrence_type is required for recurring jobs';
+    return `recurrence_type is required for recurring jobs. Valid values: ${VALID_RECURRENCE_TYPES.join(', ')}`;
+  }
+  if (payload.month_range && !VALID_MONTH_RANGES.includes(payload.month_range)) {
+    return `month_range must be one of: ${VALID_MONTH_RANGES.join(', ')}`;
   }
   if (!payload.recurrence_start_date || !payload.recurrence_end_date) {
     return 'recurrence_start_date and recurrence_end_date are required for recurring jobs';
@@ -207,17 +213,18 @@ const normalizeTemplateLikeEntries = async (entries = []) => {
   return resolved.filter(Boolean);
 };
 
-export const normalizeJobPayload = async (body = {}) => {
+export const normalizeJobPayload = async (body = {}, organisationId = null) => {
   const payload = { ...body };
 
   if (payload.client_id) {
     payload.client_id = toObjectId(payload.client_id, 'client_id');
   }
 
-  // Resolve client
+  // Resolve client — always scope by organisation
+  const clientQuery = organisationId ? { organisation_id: organisationId } : {};
   const client = payload.client_id
-    ? await Client.findById(payload.client_id)
-    : (payload.client_name ? await Client.findOne({ name: payload.client_name }) : null);
+    ? await Client.findOne({ _id: payload.client_id, ...clientQuery })
+    : (payload.client_name ? await Client.findOne({ name: payload.client_name, ...clientQuery }) : null);
 
   if (client) {
     payload.client_id = client._id;
@@ -412,6 +419,7 @@ export const listJobs = asyncHandler(async (req, res) => {
     const assignedJobIds = await Allocation.distinct('job_id', {
       organisation_id: req.user.organisation_id,
       staff_id: req.user._id,
+      status: 'active',
     });
     query._id = { $in: assignedJobIds };
   }
@@ -454,7 +462,7 @@ export const getJobById = asyncHandler(async (req, res) => {
 });
 
 export const createJob = asyncHandler(async (req, res) => {
-  const body = await normalizeJobPayload(req.body || {});
+  const body = await normalizeJobPayload(req.body || {}, req.user.organisation_id);
   if (!body.name || !body.client_name || body.job_fee === undefined) {
     return res.status(400).json({ detail: 'name, client_name, job_type and job_fee are required' });
   }
@@ -487,7 +495,7 @@ export const createJob = asyncHandler(async (req, res) => {
 
 export const updateJob = asyncHandler(async (req, res) => {
   const _id = toObjectId(req.params.job_id, 'job_id');
-  const payload = await normalizeJobPayload(req.body || {});
+  const payload = await normalizeJobPayload(req.body || {}, req.user.organisation_id);
 
   const existing = await Job.findById(_id);
   if (!existing) return res.status(404).json({ detail: 'Job not found' });
@@ -612,10 +620,6 @@ export const updateJobStatus = asyncHandler(async (req, res) => {
     return res.status(422).json({
       detail: `Cannot transition from "${job.status}" to "${status}". Allowed: ${validTransitions.join(', ')}`,
     });
-  }
-
-  if (status === 'Completed' && job.status === 'On Hold') {
-    // Allow completing from On Hold
   }
 
   job.status = status;

@@ -103,10 +103,10 @@ export const listStaff = asyncHandler(async (req, res) => {
   } else {
     filterConditions.push({ is_archived: { $ne: true } });
   }
-  const tenantFilter = filterConditions.length > 1 ? { $and: filterConditions } : filterConditions[0];
+  const organisationFilter = filterConditions.length > 1 ? { $and: filterConditions } : filterConditions[0];
   const [records, total] = await Promise.all([
-    Staff.find(tenantFilter).sort({ createdAt: -1 }).skip(skip).limit(limit),
-    Staff.countDocuments(tenantFilter),
+    Staff.find(organisationFilter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Staff.countDocuments(organisationFilter),
   ]);
   res.json({ data: serializeList(records).map(sanitizeStaff), pagination: buildPaginationMeta(total, page, limit) });
 });
@@ -132,7 +132,7 @@ export const createStaff = asyncHandler(async (req, res) => {
   if (!withinLimit) return;
 
   const normalizedEmail = normalizeEmail(body.email);
-  const exists = await Staff.findOne({ email: normalizedEmail });
+  const exists = await Staff.findOne({ email: normalizedEmail, organisation_id: req.user.organisation_id });
 
   if (exists) {
     await ensureStaffMembership({
@@ -150,6 +150,12 @@ export const createStaff = asyncHandler(async (req, res) => {
       email_error: null,
       invite_required: false,
     });
+  }
+
+  // Check if email already exists in a different organisation
+  const crossOrgExists = await Staff.findOne({ email: normalizedEmail });
+  if (crossOrgExists) {
+    return res.status(409).json({ detail: 'Email already in use in another organisation' });
   }
 
   const plainPassword = generateTemporaryPassword();
@@ -309,7 +315,6 @@ export const archiveStaff = asyncHandler(async (req, res) => {
   }
 
   existing.is_archived = true;
-  existing.is_active = false;
   await existing.save();
 
   return res.json({
@@ -328,7 +333,6 @@ export const restoreStaff = asyncHandler(async (req, res) => {
   }
 
   existing.is_archived = false;
-  existing.is_active = true;
   await existing.save();
 
   return res.json({
@@ -485,7 +489,7 @@ export const getStaffMonthlySummary = asyncHandler(async (req, res) => {
     );
     const computedFee = allocation.job_fee * (Number(allocation.percentage || 0) / 100);
     const fee = Number(allocation.allocated_fee ?? computedFee);
-    const budgetedHours = hourlyRate > 0 ? (fee * efficiency) / hourlyRate : 0;
+    const budgetedHours = hourlyRate > 0 ? fee / hourlyRate : 0;
     const budgetedWip = hourlyRate * budgetedHours;
 
     if (!seenJobKeys.has(jobKey)) {

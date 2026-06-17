@@ -36,10 +36,10 @@ const normalizeDepartmentPayload = (body = {}) => {
 
 export const listDepartments = asyncHandler(async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
-  const tenantFilter = { organisation_id: req.user.organisation_id };
+  const organisationFilter = { organisation_id: req.user.organisation_id };
   const [records, total] = await Promise.all([
-    Department.find(tenantFilter).sort({ createdAt: -1 }).skip(skip).limit(limit),
-    Department.countDocuments(tenantFilter),
+    Department.find(organisationFilter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Department.countDocuments(organisationFilter),
   ]);
   res.json({ data: serializeList(records), pagination: buildPaginationMeta(total, page, limit) });
 });

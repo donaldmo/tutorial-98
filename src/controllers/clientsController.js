@@ -104,7 +104,10 @@ export const createClient = asyncHandler(async (req, res) => {
   const withinLimit = await checkPlanLimit(req, res, 'clients');
   if (!withinLimit) return;
 
-  const existing = await Client.findOne({ name: body.name, organisation_id: req.user.organisation_id });
+  const existing = await Client.findOne({
+    name: { $regex: new RegExp(`^${body.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+    organisation_id: req.user.organisation_id,
+  });
   if (existing) {
     return res.status(409).json({ detail: 'A client with this name already exists' });
   }
@@ -138,7 +141,11 @@ export const updateClient = asyncHandler(async (req, res) => {
     return res.status(403).json({ detail: 'Access denied' });
   }
 
-  const duplicate = await Client.findOne({ name: body.name, _id: { $ne: _id }, organisation_id: req.user.organisation_id });
+  const duplicate = await Client.findOne({
+    name: { $regex: new RegExp(`^${body.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+    _id: { $ne: _id },
+    organisation_id: req.user.organisation_id,
+  });
   if (duplicate) {
     return res.status(409).json({ detail: 'A client with this name already exists' });
   }
@@ -200,10 +207,15 @@ export const importClients = asyncHandler(async (req, res) => {
         continue;
       }
 
+      const ALLOWED_IMPORT_FIELDS = ['name', 'email', 'phone', 'industry', 'contact_person', 'notes', 'address', 'annual_fee', 'role_fee_splits'];
+      const safeRow = Object.fromEntries(
+        ALLOWED_IMPORT_FIELDS.filter((k) => k in row).map((k) => [k, row[k]]),
+      );
+
       await Client.findOneAndUpdate(
         { name: normalizedName, organisation_id: req.user.organisation_id },
         {
-          ...row,
+          ...safeRow,
           name: normalizedName,
           email: normalizedEmail,
           is_active: true,

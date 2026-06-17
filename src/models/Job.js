@@ -119,45 +119,8 @@ jobSchema.methods.updateAllocationStatus = async function () {
   }
   return this.status;
 };
-
-// Add efficiency calculation methods
-jobSchema.methods.calculateEfficiency = function () {
-  const totalBudgeted = this.allocations?.reduce((sum, alloc) => sum + (alloc.adjusted_hours || 0), 0) || 0;
-  const totalLogged = this.allocations?.reduce((sum, alloc) => sum + (alloc.total_logged_hours || 0), 0) || 0;
-  const efficiency = totalBudgeted > 0 ? (totalLogged / totalBudgeted) * 100 : 0;
-  
-  return {
-    current_efficiency: efficiency,
-    total_budgeted_hours: totalBudgeted,
-    total_logged_hours: totalLogged,
-  };
-};
-
-jobSchema.methods.updateEfficiency = function (efficiencyData, completedBy) {
-  const newEfficiency = efficiencyData.current_efficiency;
-  const lastEfficiency = this.efficiency_metrics?.current_efficiency;
-  
-  // Only add to history if efficiency changed significantly or first calculation
-  const shouldAddToHistory = !lastEfficiency || Math.abs(newEfficiency - lastEfficiency) > 1;
-  
-  if (shouldAddToHistory) {
-    this.efficiency_metrics = {
-      current_efficiency: newEfficiency,
-      last_calculated_at: new Date(),
-      total_budgeted_hours: efficiencyData.total_budgeted_hours,
-      total_logged_hours: efficiencyData.total_logged_hours,
-      efficiency_history: [...(this.efficiency_metrics?.efficiency_history || []), {
-        calculated_at: new Date(),
-        efficiency_percentage: newEfficiency,
-        total_budgeted_hours: efficiencyData.total_budgeted_hours,
-        total_logged_hours: efficiencyData.total_logged_hours,
-        completed_by: completedBy
-      }]
-    };
-  }
-  
-  return this.save();
-};
+// Efficiency calculation moved to jobEfficiencyService.js
+// Model methods removed — they referenced non-existent this.allocations
 
 jobSchema.index({ status: 1, deadline: 1 });
 
